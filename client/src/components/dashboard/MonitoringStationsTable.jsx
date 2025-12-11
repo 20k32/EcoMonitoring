@@ -1,6 +1,7 @@
 import { useEcoData } from "../../hooks/useEcoData";
 import { useRefresh } from "../../context/RefreshContext";
 import { getAqiColor } from "../../utils/aqi";
+import { useState, useMemo } from "react";
 
 const MonitoringStationsTable = ({ countryId }) => {
     const {
@@ -11,6 +12,55 @@ const MonitoringStationsTable = ({ countryId }) => {
         countryLabel,
     } = useEcoData(countryId);
     const { triggerRefresh } = useRefresh();
+    const [sortConfig, setSortConfig] = useState({
+        key: null,
+        direction: "asc",
+    });
+
+    const handleSort = (key) => {
+        setSortConfig((prev) => ({
+            key,
+            direction:
+                prev.key === key && prev.direction === "asc" ? "desc" : "asc",
+        }));
+    };
+
+    const sortedRows = useMemo(() => {
+        if (!sortConfig.key) return rows;
+
+        return [...rows].sort((a, b) => {
+            let aVal, bVal;
+
+            switch (sortConfig.key) {
+                case "location":
+                    aVal = a.locationName || "";
+                    bVal = b.locationName || "";
+                    break;
+                case "aqi":
+                    aVal = a.airQualityIndex || 0;
+                    bVal = b.airQualityIndex || 0;
+                    break;
+                case "pm10":
+                    aVal = a.pm10 || 0;
+                    bVal = b.pm10 || 0;
+                    break;
+                case "pm25":
+                    aVal = a.pm25 || 0;
+                    bVal = b.pm25 || 0;
+                    break;
+                case "updated":
+                    aVal = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+                    bVal = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+                    break;
+                default:
+                    return 0;
+            }
+
+            if (aVal < bVal) return sortConfig.direction === "asc" ? -1 : 1;
+            if (aVal > bVal) return sortConfig.direction === "asc" ? 1 : -1;
+            return 0;
+        });
+    }, [rows, sortConfig]);
 
     const handleRefresh = async () => {
         try {
@@ -44,29 +94,64 @@ const MonitoringStationsTable = ({ countryId }) => {
                     <table className="w-full table-fixed text-left">
                         <thead className="bg-[#F9FAFB]">
                             <tr>
-                                <th className="px-4 py-2 uppercase text-[#6B7280] flex-1">
-                                    Location
+                                <th
+                                    className="px-4 py-2 uppercase text-[#6B7280] flex-1 cursor-pointer hover:bg-gray-100 select-none"
+                                    onClick={() => handleSort("location")}
+                                >
+                                    Location{" "}
+                                    {sortConfig.key === "location" &&
+                                        (sortConfig.direction === "asc"
+                                            ? "↑"
+                                            : "↓")}
                                 </th>
-                                <th className="px-4 py-2 uppercase text-[#6B7280] flex-1">
-                                    AQI
+                                <th
+                                    className="px-4 py-2 uppercase text-[#6B7280] flex-1 cursor-pointer hover:bg-gray-100 select-none"
+                                    onClick={() => handleSort("aqi")}
+                                >
+                                    AQI{" "}
+                                    {sortConfig.key === "aqi" &&
+                                        (sortConfig.direction === "asc"
+                                            ? "↑"
+                                            : "↓")}
                                 </th>
-                                <th className="px-4 py-2 uppercase text-[#6B7280] flex-1">
-                                    PM10
+                                <th
+                                    className="px-4 py-2 uppercase text-[#6B7280] flex-1 cursor-pointer hover:bg-gray-100 select-none"
+                                    onClick={() => handleSort("pm10")}
+                                >
+                                    PM10{" "}
+                                    {sortConfig.key === "pm10" &&
+                                        (sortConfig.direction === "asc"
+                                            ? "↑"
+                                            : "↓")}
                                 </th>
-                                <th className="px-4 py-2 uppercase text-[#6B7280] flex-1">
-                                    PM2.5
+                                <th
+                                    className="px-4 py-2 uppercase text-[#6B7280] flex-1 cursor-pointer hover:bg-gray-100 select-none"
+                                    onClick={() => handleSort("pm25")}
+                                >
+                                    PM2.5{" "}
+                                    {sortConfig.key === "pm25" &&
+                                        (sortConfig.direction === "asc"
+                                            ? "↑"
+                                            : "↓")}
                                 </th>
-                                <th className="px-4 py-2 uppercase text-[#6B7280] flex-1">
-                                    Updated
+                                <th
+                                    className="px-4 py-2 uppercase text-[#6B7280] flex-1 cursor-pointer hover:bg-gray-100 select-none"
+                                    onClick={() => handleSort("updated")}
+                                >
+                                    Updated{" "}
+                                    {sortConfig.key === "updated" &&
+                                        (sortConfig.direction === "asc"
+                                            ? "↑"
+                                            : "↓")}
                                 </th>
                             </tr>
                         </thead>
                         <tbody>
-                            {rows.map((item, index) => (
+                            {sortedRows.map((item, index) => (
                                 <tr key={item._id} className="bg-white">
                                     <td
                                         className={`px-4 py-2 ${
-                                            index < rows.length - 1
+                                            index < sortedRows.length - 1
                                                 ? "border-b-[2px] border-[#E5E7EB]"
                                                 : ""
                                         }`}
@@ -75,7 +160,7 @@ const MonitoringStationsTable = ({ countryId }) => {
                                     </td>
                                     <td
                                         className={`px-4 ${
-                                            index < rows.length - 1
+                                            index < sortedRows.length - 1
                                                 ? "border-b-[2px] border-[#E5E7EB]"
                                                 : ""
                                         }`}
@@ -90,7 +175,7 @@ const MonitoringStationsTable = ({ countryId }) => {
                                     </td>
                                     <td
                                         className={`px-4 py-2 ${
-                                            index < rows.length - 1
+                                            index < sortedRows.length - 1
                                                 ? "border-b-[2px] border-[#E5E7EB]"
                                                 : ""
                                         }`}
@@ -99,7 +184,7 @@ const MonitoringStationsTable = ({ countryId }) => {
                                     </td>
                                     <td
                                         className={`px-4 py-2 ${
-                                            index < rows.length - 1
+                                            index < sortedRows.length - 1
                                                 ? "border-b-[2px] border-[#E5E7EB]"
                                                 : ""
                                         }`}
@@ -108,7 +193,7 @@ const MonitoringStationsTable = ({ countryId }) => {
                                     </td>
                                     <td
                                         className={`px-4 py-2 text-[#6B7280] ${
-                                            index < rows.length - 1
+                                            index < sortedRows.length - 1
                                                 ? "border-b-[2px] border-[#E5E7EB]"
                                                 : ""
                                         }`}
